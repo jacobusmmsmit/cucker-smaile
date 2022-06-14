@@ -1,7 +1,7 @@
 using DifferentialEquations
 using Turing
 using Distributions
-using Plots
+using StatsPlots
 using StaticArrays
 using BenchmarkTools
 using ForwardDiff
@@ -14,7 +14,7 @@ dart = Shape([(0.0, 0.0), (0.5, 1.0), (1.0, 0.0), (0.5, 0.5)])
 function cuckersmale!(du, u, p, t)
     N, K, β = p
 
-    println(eltype(u))
+    # println(eltype(u))
     for i in 1:N
         du[3, i] = zero(eltype(u))
         du[4, i] = zero(eltype(u))
@@ -32,7 +32,7 @@ function cuckersmale!(du, u, p, t)
             xdiff = xj - xi
             vdiff = vj - vi
             x = a(twonorm(xdiff), K, β) .* vdiff
-            typeof(x) <: ForwardDiff.Dual && println("Val: $(x.value), Derivative: $(x.partials)")
+            # typeof(x) <: ForwardDiff.Dual && println("Val: $(x.value), Derivative: $(x.partials)")
             totx += x[1]
             toty += x[2]
         end
@@ -72,8 +72,10 @@ end
     # @show new_problem_p
     prob = remake(cucker_smaile_problem, p=new_problem_p, u0=convert(Matrix{typeof(var)}, cucker_smaile_problem.u0)) # , isinplace=true
     sol = solve(prob, alg, saveat=save_every)
-    if sol.retcode == :Success
-        println("nice")
+    if sol.retcode != :Success
+        println("bruh moment")
+    else
+        println("nice meme")
     end
     predicted = vec(sol)
     # @show sizeof(predicted)
@@ -93,7 +95,7 @@ function main()
     # du = similar(u0)
     tspan = (0.0, 5.0)
 
-    alg = RK4()
+    alg = TRBDF2()
     save_every = 0.1
     global_p = (alg, save_every)
 
@@ -109,6 +111,7 @@ function main()
     # n_chains = 8
     # println("Running inference with $sampling_algorithm for $n_samples iterations on $n_chains independent chains: ")
     chain = sample(model, sampling_algorithm, n_samples)
+    plot(chain)
 
     # xvals = (sol(time)[1, :] for time in sol.t)
     # yvals = (sol(time)[2, :] for time in sol.t)
