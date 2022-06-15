@@ -6,43 +6,9 @@ using StaticArrays
 using BenchmarkTools
 using ForwardDiff
 
-a(r, K, β) = K / ((1 + r^2)^β) # Communication kernel
-twonorm(x) = sqrt(sum(abs2, x))
+include("model.jl")
 
 dart = Shape([(0.0, 0.0), (0.5, 1.0), (1.0, 0.0), (0.5, 0.5)])
-
-function cuckersmale!(du, u, p, t)
-    N, K, β = p
-
-    # println(eltype(u))
-    for i in 1:N
-        du[3, i] = zero(eltype(u))
-        du[4, i] = zero(eltype(u))
-        du[1, i] = u[3, i]
-        du[2, i] = u[4, i]
-    end
-
-    for i in 1:N
-        xi = SVector(u[1, i], u[2, i])
-        vi = SVector(u[3, i], u[4, i])
-        totx, toty = zero(eltype(u)), zero(eltype(u))
-        for j in 1:N
-            xj = SVector(u[1, j], u[2, j])
-            vj = SVector(u[3, j], u[4, j])
-            xdiff = xj - xi
-            vdiff = vj - vi
-            x = a(twonorm(xdiff), K, β) .* vdiff
-            # typeof(x) <: ForwardDiff.Dual && println("Val: $(x.value), Derivative: $(x.partials)")
-            totx += x[1]
-            toty += x[2]
-        end
-        du[3, i] += totx / N
-        du[4, i] += toty / N
-        du[1, i] += du[3, i]
-        du[2, i] += du[4, i]
-    end
-    return nothing
-end
 
 @model function fit_cucker_smaile(data, cucker_smaile_problem, problem_p, global_p)
     β ~ Uniform(0.0, 1.0)
@@ -73,7 +39,7 @@ end
     prob = remake(cucker_smaile_problem, p=new_problem_p, u0=convert(Matrix{typeof(var)}, cucker_smaile_problem.u0)) # , isinplace=true
     sol = solve(prob, alg, saveat=save_every)
     if sol.retcode != :Success
-        println("bruh moment")
+        throw(ErrorException("Unsuccessful with parameters: K = $(K), β = $(β)"))
     else
         println("nice meme")
     end
@@ -95,7 +61,7 @@ function main()
     # du = similar(u0)
     tspan = (0.0, 5.0)
 
-    alg = TRBDF2()
+    alg = RK4()
     save_every = 0.1
     global_p = (alg, save_every)
 
