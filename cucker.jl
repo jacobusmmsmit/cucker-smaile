@@ -55,6 +55,22 @@ function main()
     N = 30 # Number of agents
     # Agent state is (xᵢ(t), vᵢ(t)) ∈ ℝᵈ × ℝᵈ
     u0 = rand(Uniform(-1.0, 1.0), 4, N)
+
+    ρ = 1.0 # Circle radius
+    N = 30 # Number of agents
+
+    # Agent state is (xᵢ(t), vᵢ(t)) ∈ ℝᵈ × ℝᵈ
+    angles = 0.0:2π/N:(2π-2π/N) # Angular position of agents
+    positions = [SVector(ρ * sin(θ), ρ * cos(θ)) for θ in angles]
+    velocities = .-positions
+    u0 = zeros(4, N)
+    for (i, (p, v)) in enumerate(zip(positions, velocities))
+        u0[1, i] = p[1]
+        u0[2, i] = p[2]
+        u0[3, i] = v[1]
+        u0[4, i] = v[2]
+    end
+
     β = 0.3
     K = 0.9
     p = (N, K, β)
@@ -68,43 +84,43 @@ function main()
     # CONSTRUCT PROBLEM AND SOLVE
     prob = ODEProblem(cuckersmale!, u0, tspan, p)
     sol = solve(prob, alg, saveat=save_every)
-    sol_data = vec(sol)
+    # sol_data = vec(sol)
 
-    model = fit_cucker_smaile(sol_data, prob, p, global_p)
+    # model = fit_cucker_smaile(sol_data, prob, p, global_p)
 
-    sampling_algorithm = NUTS()
-    n_samples = 30
+    # sampling_algorithm = NUTS()
+    # n_samples = 30
     # n_chains = 8
     # println("Running inference with $sampling_algorithm for $n_samples iterations on $n_chains independent chains: ")
-    chain = sample(model, sampling_algorithm, n_samples)
-    plot(chain)
+    # chain = sample(model, sampling_algorithm, n_samples)
+    # plot(chain)
 
-    # xvals = (sol(time)[1, :] for time in sol.t)
-    # yvals = (sol(time)[2, :] for time in sol.t)
-    # xrange = (minimum((minimum(minimum.(xvals)), 0)), maximum((maximum(maximum.(xvals)), 1)))
-    # yrange = (minimum((minimum(minimum.(yvals)), 0)), maximum((maximum(maximum.(yvals)), 1)))
+    xvals = (sol(time)[1, :] for time in sol.t)
+    yvals = (sol(time)[2, :] for time in sol.t)
+    xrange = (minimum((minimum(minimum.(xvals)), 0)), maximum((maximum(maximum.(xvals)), 1)))
+    yrange = (minimum((minimum(minimum.(yvals)), 0)), maximum((maximum(maximum.(yvals)), 1)))
 
-    # anim = @animate for t in tspan[1]:0.1:tspan[2]
-    #     plot1 = plot(
-    #         xlims=xrange,
-    #         ylims=yrange,
-    #         aspect_ratio=1.0,
-    #         legend=:none,)
-    #     for i in 1:N
-    #         point = (sol(t)[1, i], sol(t)[2, i])
-    #         plot!(
-    #             plot1,
-    #             point,
-    #             msw=1.5,
-    #             markersize=10,
-    #             # marker=dart,
-    #             mc="#4682B4",
-    #             st=:scatter,
-    #             msc=:black,
-    #         )
-    #     end
-    # end
-    # gif(anim, "gifs/first_out.gif", fps = 60)
+    anim = @animate for t in tspan[1]:0.1:tspan[2]
+        plot1 = plot(
+            xlims=xrange,
+            ylims=yrange,
+            aspect_ratio=1.0,
+            legend=:none,)
+        for i in 1:N
+            point = (sol(t)[1, i], sol(t)[2, i])
+            plot!(
+                plot1,
+                point,
+                msw=1.5,
+                markersize=10,
+                # marker=dart,
+                mc="#4682B4",
+                st=:scatter,
+                msc=:black,
+            )
+        end
+    end
+    gif(anim, "gifs/circle_$N.gif", fps=60)
 end
 
 main()
