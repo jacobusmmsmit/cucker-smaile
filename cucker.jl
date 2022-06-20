@@ -38,11 +38,11 @@ dart = Shape([(0.0, 0.0), (0.5, 1.0), (1.0, 0.0), (0.5, 0.5)])
     # @show new_problem_p
     prob = remake(cucker_smaile_problem, p=new_problem_p, u0=convert(Matrix{typeof(var)}, cucker_smaile_problem.u0)) # , isinplace=true
     sol = solve(prob, alg, saveat=save_every)
-    if sol.retcode != :Success
-        throw(ErrorException("Unsuccessful with parameters: K = $(K), β = $(β)"))
-    else
-        println("nice meme")
-    end
+    # if sol.retcode != :Success
+    #     throw(ErrorException("Unsuccessful with parameters: K = $(K.value), β = $(β.value)"))
+    # else
+    #     println("nice meme")
+    # end
     predicted = vec(sol)
     # @show sizeof(predicted)
     # @show sizeof(data)
@@ -89,7 +89,7 @@ function main()
     # model = fit_cucker_smaile(sol_data, prob, p, global_p)
 
     # sampling_algorithm = NUTS()
-    # n_samples = 30
+    # n_samples = 300
     # n_chains = 8
     # println("Running inference with $sampling_algorithm for $n_samples iterations on $n_chains independent chains: ")
     # chain = sample(model, sampling_algorithm, n_samples)
