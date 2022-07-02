@@ -20,18 +20,20 @@ dart = Shape([(0.0, 0.0), (0.5, 1.0), (1.0, 0.0), (0.5, 0.5)])
     new_problem_p = (N, K, β)
 
     # Debugging: (can be improved with display or show or smth)
-    # inference_parameter = β
-    # if typeof(inference_parameter) <: ForwardDiff.Dual
-    #     println("Val: $(inference_parameter.value), Derivative: $(inference_parameter.partials)")
-    # else
-    #     println("Val: $inference_parameter")
-    # end
+    # begin
+    #     inference_parameter = β
+    #     if typeof(inference_parameter) <: ForwardDiff.Dual
+    #         println("Val: $(inference_parameter.value), Derivative: $(inference_parameter.partials)")
+    #     else
+    #         println("Val: $inference_parameter")
+    #     end
 
-    # inference_parameter = K
-    # if typeof(inference_parameter) <: ForwardDiff.Dual
-    #     println("Val: $(inference_parameter.value), Derivative: $(inference_parameter.partials)")
-    # else
-    #     println("Val: $inference_parameter")
+    #     inference_parameter = K
+    #     if typeof(inference_parameter) <: ForwardDiff.Dual
+    #         println("Val: $(inference_parameter.value), Derivative: $(inference_parameter.partials)")
+    #     else
+    #         println("Val: $inference_parameter")
+    #     end
     # end
 
     # @show convert(Matrix{typeof(var)}, cucker_smaile_problem.u0)
@@ -71,7 +73,7 @@ function main()
         u0[4, i] = v[2]
     end
 
-    β = 0.3
+    β = 0.1
     K = 0.9
     p = (N, K, β)
     # du = similar(u0)

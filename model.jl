@@ -2,7 +2,7 @@ using StaticArrays
 using ForwardDiff
 
 a(r, K, β) = K / ((1 + r^2)^β) # Communication kernel
-twonorm(x) = sqrt(sum(abs2, x))
+twonorm(x; ϵ=0.001) = sqrt(sum(abs2, x) + ϵ)
 
 function cuckersmale!(du, u, p, t)
     N, K, β = p
@@ -17,10 +17,10 @@ function cuckersmale!(du, u, p, t)
             totx += x[1]
             toty += x[2]
         end
+        du[1, i] = u[3, i]
+        du[2, i] = u[4, i]
         du[3, i] = totx / N
         du[4, i] = toty / N
-        du[1, i] = u[3, i] + du[3, i]
-        du[2, i] = u[4, i] + du[4, i]
     end
     return nothing
 end

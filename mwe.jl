@@ -1,4 +1,7 @@
-using Distributed
+using Pkg
+Pkg.activate(".")
+println("Activated")
+
 using DifferentialEquations
 using Turing
 using Distributions
@@ -6,33 +9,15 @@ using StaticArrays
 using ForwardDiff
 using Preferences
 using StatsPlots
+using Random
 
-set_preferences!(ForwardDiff, "nansafe_mode" => true)
+Random.seed!(02072022)
 
 
-a(r, K, β) = K / ((1 + r^2)^β) # Communication kernel
-twonorm(x) = sqrt(sum(abs2, x))
+# set_preferences!(ForwardDiff, "nansafe_mode" => false)
 
-function cuckersmale!(du, u, p, t)
-    N, K, β = p
-    for i in 1:N
-        xi = SVector(u[1, i], u[2, i])
-        vi = SVector(u[3, i], u[4, i])
-        totx, toty = zero(eltype(u)), zero(eltype(u))
-        for j in 1:N
-            xj = SVector(u[1, j], u[2, j])
-            vj = SVector(u[3, j], u[4, j])
-            x = a(twonorm(xj - xi), K, β) .* (vj - vi)
-            totx += x[1]
-            toty += x[2]
-        end
-        du[3, i] = totx / N
-        du[4, i] = toty / N
-        du[1, i] = u[3, i] + du[3, i]
-        du[2, i] = u[4, i] + du[4, i]
-    end
-    return nothing
-end
+println("Running functions")
+include("model.jl")
 
 @model function fit_cucker_smaile(data, cucker_smaile_problem, problem_p, global_p)
     β ~ Uniform(0.0, 1.0)
@@ -68,30 +53,74 @@ end
 function main()
     # SETUP
     # Agent state is (xᵢ(t), vᵢ(t)) ∈ ℝᴺ × ℝᴺ
+    ρ = 1.0 # Circle radius
+    N = 40 # Number of agents
 
-    N = 2 # Number of agents
+    angles = 0.0:2π/N:(2π-2π/N) # Angular position of agents
+    positions = [SVector(ρ * sin(θ), ρ * cos(θ)) for θ in angles]
+    velocities = .-positions
+    u0 = zeros(4, N)
+    for (i, (p, v)) in enumerate(zip(positions, velocities))
+        u0[1, i] = p[1]
+        u0[2, i] = p[2]
+        u0[3, i] = v[1]
+        u0[4, i] = v[2]
+    end
+
     u0 = rand(Uniform(-1.0, 1.0), 4, N)
+
     β = 0.3
     K = 0.9
     p = (N, K, β)
     tspan = (0.0, 5.0)
 
-    alg = TRBDF2()
+    alg = Rodas5()
     save_every = 0.1
     global_p = (alg, save_every)
 
     # CONSTRUCT PROBLEM AND SOLVE
     prob = ODEProblem(cuckersmale!, u0, tspan, p)
     sol = solve(prob, alg, saveat=save_every)
+
+    # PLOT SOLUTION
+    xvals = (sol(time)[1, :] for time in sol.t)
+    yvals = (sol(time)[2, :] for time in sol.t)
+    xrange = (minimum((minimum(minimum.(xvals)), 0)), maximum((maximum(maximum.(xvals)), 1)))
+    yrange = (minimum((minimum(minimum.(yvals)), 0)), maximum((maximum(maximum.(yvals)), 1)))
+
+    anim = @animate for t in tspan[1]:0.1:tspan[2]
+        plot1 = plot(
+            xlims=xrange,
+            ylims=yrange,
+            aspect_ratio=1.0,
+            legend=:none,)
+        for i in 1:N
+            point = (sol(t)[1, i], sol(t)[2, i])
+            plot!(
+                plot1,
+                point,
+                msw=1.5,
+                markersize=10,
+                # marker=dart,
+                mc="#4682B4",
+                st=:scatter,
+                msc=:black,
+            )
+        end
+    end
+    gif(anim, "gifs/circle_$N.gif", fps=60)
+
+
     sol_data = vec(sol)
     sol_data .+= rand(Normal(0, 0.05), length(sol_data))
     model = fit_cucker_smaile(sol_data, prob, p, global_p)
-    # chain = sample(model, NUTS(), 1000, 4)
-    # chain = sample(model, NUTS(), 3000)
-    num_chains = 4
-    chains = mapreduce(c -> sample(model, NUTS(), 3000), chainscat, 1:num_chains)
+    chain = sample(model, NUTS(), 1000)
+    # chain = sample(model, NUTS(), MCMCThreads(), 1000, 4)
+    # num_chains = 4
+    # chains = mapreduce(c -> sample(model, NUTS(), 3000), chainscat, 1:num_chains)
 end
 
+println("Running main")
 ch = main()
 
 plot(ch)
